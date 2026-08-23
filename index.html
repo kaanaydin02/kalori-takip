@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kalori Takip</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#3c3489">
+<style>
+  :root{
+    --bg:#f4f3ef; --card:#ffffff; --border:#e4e2da; --border-strong:#d3d0c5;
+    --text:#242320; --text-2:#6b6a63; --text-3:#98968c;
+    --accent:#3c3489; --accent-bg:#eeedfe; --accent-text:#26215c;
+    --danger:#e24b4a; --danger-bg:#fcebeb; --danger-text:#791f1f;
+    --carb:#1d9e75; --carb-bg:#e1f5ee; --carb-text:#04342c;
+    --radius:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1c1c1a; --card:#242422; --border:#3a3935; --border-strong:#4a4944;
+      --text:#efeee8; --text-2:#a8a69c; --text-3:#77756c;
+      --accent:#7f77dd; --accent-bg:#3c3489; --accent-text:#eeedfe;
+      --danger:#f09595; --danger-bg:#791f1f; --danger-text:#fcebeb;
+      --carb:#5dcaa5; --carb-bg:#085041; --carb-text:#e1f5ee;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); padding-bottom:80px;
+  }
+  .wrap{max-width:480px; margin:0 auto; padding:16px;}
+  h1{font-size:20px; font-weight:600; margin:4px 0 16px;}
+  h2{font-size:15px; font-weight:600; margin:0 0 10px;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:12px;}
+  .row{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .datebar{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .datebar button{background:var(--card); border:1px solid var(--border-strong); border-radius:8px; width:36px; height:36px; font-size:16px; color:var(--text);}
+  .dateinput{border:none; background:transparent; font-size:15px; font-weight:600; color:var(--text); text-align:center; width:150px;}
+  .bar-label{display:flex; justify-content:space-between; font-size:12px; color:var(--text-2); margin-bottom:4px;}
+  .bar-outer{height:10px; background:var(--bg); border-radius:6px; overflow:hidden; border:1px solid var(--border);}
+  .bar-outer.small{height:7px;}
+  .bar-inner{height:100%; border-radius:6px; background:var(--accent); transition:width .2s;}
+  .bar-inner.carb{background:var(--carb);}
+  .goalrow{margin-bottom:12px;}
+  .goalrow:last-child{margin-bottom:0;}
+  .entry{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border);}
+  .entry:last-child{border-bottom:none;}
+  .entry .name{font-size:14px; font-weight:500;}
+  .entry .sub{font-size:12px; color:var(--text-2);}
+  .entry .kcal{font-size:13px; color:var(--text-2); margin-right:10px; white-space:nowrap;}
+  .delbtn{background:none; border:none; color:var(--text-3); font-size:16px; padding:4px 6px; cursor:pointer;}
+  .empty{color:var(--text-3); font-size:13px; text-align:center; padding:14px 0;}
+  input,select{
+    width:100%; padding:9px 10px; border:1px solid var(--border-strong); border-radius:8px;
+    background:var(--bg); color:var(--text); font-size:14px; margin-bottom:8px;
+  }
+  label{font-size:12px; color:var(--text-2); display:block; margin-bottom:3px;}
+  .field{margin-bottom:8px;}
+  .btn{
+    width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-strong);
+    background:var(--card); color:var(--text); font-size:14px; font-weight:500;
+  }
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .btn.danger-outline{border-color:var(--danger); color:var(--danger); background:transparent;}
+  .foodlist{max-height:260px; overflow-y:auto;}
+  .fooditem{display:flex; justify-content:space-between; align-items:center; padding:9px 4px; border-bottom:1px solid var(--border); cursor:pointer;}
+  .fooditem:last-child{border-bottom:none;}
+  .fooditem .name{font-size:14px; font-weight:500;}
+  .fooditem .meta{font-size:12px; color:var(--text-2);}
+  .fooditem.selected{background:var(--accent-bg); border-radius:8px;}
+  .tabs{display:flex; position:fixed; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--border); max-width:480px; margin:0 auto;}
+  .tabs button{flex:1; padding:12px 0 10px; background:none; border:none; font-size:12px; color:var(--text-3); display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .tabs button.active{color:var(--accent); font-weight:600;}
+  .tabs .ic{font-size:18px;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .search-empty{font-size:13px; color:var(--text-3); text-align:center; padding:16px 0;}
+  .modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:flex-end; justify-content:center; z-index:10;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--card); width:100%; max-width:480px; border-radius:16px 16px 0 0; padding:18px 16px 24px; max-height:85vh; overflow-y:auto;}
+  .modal-title{font-size:16px; font-weight:600; margin-bottom:12px;}
+  .two-col{display:flex; gap:8px;}
+  .two-col > div{flex:1;}
+  .link{color:var(--accent); font-size:13px; background:none; border:none; padding:0;}
+  .unit-toggle{display:flex; gap:6px; margin-bottom:8px;}
+  .unit-toggle button{flex:1; padding:7px; border-radius:8px; border:1px solid var(--border-strong); background:var(--bg); color:var(--text); font-size:13px;}
+  .unit-toggle button.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .totalrow{font-size:12px; color:var(--text-2); margin-top:2px;}
+  #toast{position:fixed; top:14px; left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg); padding:8px 16px; border-radius:8px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .2s; z-index:20;}
+  #toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kalori takip</h1>
+
+  <!-- LOG VIEW -->
+  <div class="view active" id="view-log">
+    <div class="datebar">
+      <button id="prevDay">‹</button>
+      <input type="date" id="dateInput" class="dateinput">
+      <button id="nextDay">›</button>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:10px;">
+        <h2 style="margin:0;">Hedefler</h2>
+        <button class="link" id="editGoalsBtn">Düzenle</button>
+      </div>
+      <div class="goalrow">
+        <div class="bar-label"><span>Kalori</span><span id="kcalLabel">0 / 0 kcal</span></div>
+        <div class="bar-outer"><div class="bar-inner" id="kcalBar"></div></div>
+      </div>
+      <div class="goalrow">
+        <div class="bar-label"><span>Protein</span><span id="proteinLabel">0 / 0 g</span></div>
+        <div class="bar-outer small"><div class="bar-inner" id="proteinBar"></div></div>
+      </div>
+      <div class="goalrow">
+        <div class="bar-label"><span>Karbonhidrat</span><span id="carbLabel">0 / 0 g</span></div>
+        <div class="bar-outer small"><div class="bar-inner carb" id="carbBar"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Bugün eklenenler</h2>
+      <div id="entryList"></div>
+      <div class="empty" id="entryEmpty" style="display:none;">Henüz bir şey eklenmedi.</div>
+    </div>
+
+    <button class="btn primary" id="openAddEntry">+ Yemek ekle</button>
+  </div>
+
+  <!-- FOODS VIEW -->
+  <div class="view" id="view-foods">
+    <div class="row" style="margin-bottom:10px;">
+      <h1 style="margin:0;">Besinler</h1>
+    </div>
+    <div class="card">
+      <input type="text" id="foodSearchLib" placeholder="Besin ara...">
+      <div class="foodlist" id="foodLibList"></div>
+      <div class="search-empty" id="foodLibEmpty" style="display:none;">Kayıtlı besin yok.</div>
+    </div>
+    <button class="btn primary" id="openAddFood">+ Yeni besin ekle</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-view="view-log"><span class="ic">◷</span>Günlük</button>
+    <button class="tab-btn" data-view="view-foods"><span class="ic">▤</span>Besinler</button>
+  </div>
+</div>
+
+<!-- ADD ENTRY MODAL -->
+<div class="modal-bg" id="modalEntry">
+  <div class="modal">
+    <div class="modal-title">Yemek ekle</div>
+    <input type="text" id="entryFoodSearch" placeholder="Besin ara...">
+    <div class="foodlist" id="entryFoodList" style="margin-bottom:10px;"></div>
+    <div class="search-empty" id="entryFoodEmpty" style="display:none;">Besin bulunamadı. Önce Besinler'den ekleyin.</div>
+    <div id="entrySelectedBox" style="display:none;">
+      <div class="field">
+        <label id="entryAmountLabel">Miktar (g)</label>
+        <input type="number" id="entryAmount" inputmode="decimal" placeholder="0">
+      </div>
+      <div class="totalrow" id="entryPreview"></div>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button class="btn" id="cancelEntry">Vazgeç</button>
+      <button class="btn primary" id="saveEntry">Ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD FOOD MODAL -->
+<div class="modal-bg" id="modalFood">
+  <div class="modal">
+    <div class="modal-title" id="foodModalTitle">Yeni besin</div>
+    <div class="field">
+      <label>İsim</label>
+      <input type="text" id="foodName" placeholder="ör. Hindi füme">
+    </div>
+    <div class="unit-toggle">
+      <button type="button" class="unit-opt active" data-unit="g">Gram (g)</button>
+      <button type="button" class="unit-opt" data-unit="ml">Mililitre (ml)</button>
+    </div>
+    <label style="margin-top:2px;">100 birim başına değerler</label>
+    <div class="two-col">
+      <div class="field"><label>Kalori</label><input type="number" id="foodKcal" inputmode="decimal"></div>
+      <div class="field"><label>Protein (g)</label><input type="number" id="foodProtein" inputmode="decimal"></div>
+    </div>
+    <div class="field"><label>Karbonhidrat (g)</label><input type="number" id="foodCarb" inputmode="decimal"></div>
+    <div style="display:flex; gap:8px; margin-top:10px;">
+      <button class="btn" id="cancelFood">Vazgeç</button>
+      <button class="btn primary" id="saveFood">Kaydet</button>
+    </div>
+    <button class="btn danger-outline" id="deleteFoodBtn" style="margin-top:8px; display:none;">Besini sil</button>
+  </div>
+</div>
+
+<!-- GOALS MODAL -->
+<div class="modal-bg" id="modalGoals">
+  <div class="modal">
+    <div class="modal-title">Günlük hedefler</div>
+    <div class="field"><label>Kalori (kcal)</label><input type="number" id="goalKcal" inputmode="decimal"></div>
+    <div class="two-col">
+      <div class="field"><label>Protein (g)</label><input type="number" id="goalProtein" inputmode="decimal"></div>
+      <div class="field"><label>Karbonhidrat (g)</label><input type="number" id="goalCarb" inputmode="decimal"></div>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:10px;">
+      <button class="btn" id="cancelGoals">Vazgeç</button>
+      <button class="btn primary" id="saveGoals">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let foods = [];
+let goals = { kcal: 2000, protein: 120, carb: 200 };
+let currentDate = new Date().toISOString().slice(0,10);
+let dayEntries = [];
+let selectedFoodForEntry = null;
+let editingFoodId = null;
+let newFoodUnit = 'g';
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1400);
+}
+
+function round(n, d=0){
+  const f = Math.pow(10,d);
+  return Math.round((n + Number.EPSILON) * f) / f;
+}
+
+async function loadFoods(){
+  try{
+    const v = localStorage.getItem('kt_foods');
+    foods = v ? JSON.parse(v) : [];
+  }catch(e){ foods = []; }
+}
+async function saveFoods(){
+  try{ localStorage.setItem('kt_foods', JSON.stringify(foods)); }
+  catch(e){ toast('Kaydedilemedi'); }
+}
+async function loadGoals(){
+  try{
+    const v = localStorage.getItem('kt_goals');
+    if(v) goals = JSON.parse(v);
+  }catch(e){}
+}
+async function saveGoals(){
+  try{ localStorage.setItem('kt_goals', JSON.stringify(goals)); }
+  catch(e){ toast('Kaydedilemedi'); }
+}
+async function loadDay(date){
+  try{
+    const v = localStorage.getItem('kt_day:'+date);
+    dayEntries = v ? JSON.parse(v) : [];
+  }catch(e){ dayEntries = []; }
+}
+async function saveDay(date){
+  try{ localStorage.setItem('kt_day:'+date, JSON.stringify(dayEntries)); }
+  catch(e){ toast('Kaydedilemedi'); }
+}
+
+function computeEntryValues(food, amount){
+  const factor = amount / 100;
+  return {
+    kcal: food.kcal * factor,
+    protein: food.protein * factor,
+    carb: food.carb * factor
+  };
+}
+
+function renderGoalsAndBars(){
+  let totK=0, totP=0, totC=0;
+  dayEntries.forEach(e=>{
+    totK += e.kcal; totP += e.protein; totC += e.carb;
+  });
+  document.getElementById('kcalLabel').textContent = `${round(totK)} / ${round(goals.kcal)} kcal`;
+  document.getElementById('proteinLabel').textContent = `${round(totP)} / ${round(goals.protein)} g`;
+  document.getElementById('carbLabel').textContent = `${round(totC)} / ${round(goals.carb)} g`;
+  document.getElementById('kcalBar').style.width = Math.min(100, goals.kcal ? (totK/goals.kcal*100) : 0) + '%';
+  document.getElementById('proteinBar').style.width = Math.min(100, goals.protein ? (totP/goals.protein*100) : 0) + '%';
+  document.getElementById('carbBar').style.width = Math.min(100, goals.carb ? (totC/goals.carb*100) : 0) + '%';
+}
+
+function renderEntryList(){
+  const list = document.getElementById('entryList');
+  const empty = document.getElementById('entryEmpty');
+  list.innerHTML = '';
+  if(dayEntries.length === 0){
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  dayEntries.forEach((e, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'entry';
+    div.innerHTML = `
+      <div>
+        <div class="name">${escapeHtml(e.foodName)}</div>
+        <div class="sub">${round(e.amount,1)}${e.unit} · P ${round(e.protein,1)}g · K ${round(e.carb,1)}g</div>
+      </div>
+      <div style="display:flex;align-items:center;">
+        <span class="kcal">${round(e.kcal)} kcal</span>
+        <button class="delbtn" data-idx="${idx}">✕</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  list.querySelectorAll('.delbtn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const idx = parseInt(btn.dataset.idx);
+      dayEntries.splice(idx,1);
+      await saveDay(currentDate);
+      renderEntryList();
+      renderGoalsAndBars();
+    });
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function refreshLogView(){
+  document.getElementById('dateInput').value = currentDate;
+  await loadDay(currentDate);
+  renderEntryList();
+  renderGoalsAndBars();
+}
+
+function renderFoodLibList(filter){
+  const wrap = document.getElementById('foodLibList');
+  const empty = document.getElementById('foodLibEmpty');
+  const f = (filter||'').toLowerCase();
+  const filtered = foods.filter(fd => fd.name.toLowerCase().includes(f));
+  wrap.innerHTML = '';
+  if(filtered.length === 0){
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  filtered.forEach(fd=>{
+    const div = document.createElement('div');
+    div.className = 'fooditem';
+    div.innerHTML = `
+      <div>
+        <div class="name">${escapeHtml(fd.name)}</div>
+        <div class="meta">100${fd.unit} · ${round(fd.kcal)} kcal · P ${round(fd.protein)}g · K ${round(fd.carb)}g</div>
+      </div>
+      <span class="link" data-id="${fd.id}">Düzenle</span>
+    `;
+    div.querySelector('.link').addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      openFoodModal(fd);
+    });
+    wrap.appendChild(div);
+  });
+}
+
+function openFoodModal(food){
+  editingFoodId = food ? food.id : null;
+  document.getElementById('foodModalTitle').textContent = food ? 'Besini düzenle' : 'Yeni besin';
+  document.getElementById('foodName').value = food ? food.name : '';
+  document.getElementById('foodKcal').value = food ? food.kcal : '';
+  document.getElementById('foodProtein').value = food ? food.protein : '';
+  document.getElementById('foodCarb').value = food ? food.carb : '';
+  newFoodUnit = food ? food.unit : 'g';
+  document.querySelectorAll('.unit-opt').forEach(b=>b.classList.toggle('active', b.dataset.unit === newFoodUnit));
+  document.getElementById('deleteFoodBtn').style.display = food ? 'block' : 'none';
+  document.getElementById('modalFood').classList.add('open');
+}
+
+function closeFoodModal(){
+  document.getElementById('modalFood').classList.remove('open');
+  editingFoodId = null;
+}
+
+function openEntryModal(){
+  selectedFoodForEntry = null;
+  document.getElementById('entryFoodSearch').value = '';
+  document.getElementById('entryAmount').value = '';
+  document.getElementById('entrySelectedBox').style.display = 'none';
+  renderEntryFoodList('');
+  document.getElementById('modalEntry').classList.add('open');
+}
+function closeEntryModal(){
+  document.getElementById('modalEntry').classList.remove('open');
+}
+
+function renderEntryFoodList(filter){
+  const wrap = document.getElementById('entryFoodList');
+  const empty = document.getElementById('entryFoodEmpty');
+  const f = (filter||'').toLowerCase();
+  const filtered = foods.filter(fd => fd.name.toLowerCase().includes(f));
+  wrap.innerHTML = '';
+  if(filtered.length === 0){
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  filtered.forEach(fd=>{
+    const div = document.createElement('div');
+    div.className = 'fooditem' + (selectedFoodForEntry && selectedFoodForEntry.id === fd.id ? ' selected' : '');
+    div.innerHTML = `
+      <div>
+        <div class="name">${escapeHtml(fd.name)}</div>
+        <div class="meta">100${fd.unit} · ${round(fd.kcal)} kcal</div>
+      </div>
+    `;
+    div.addEventListener('click', ()=>{
+      selectedFoodForEntry = fd;
+      document.getElementById('entryAmountLabel').textContent = `Miktar (${fd.unit})`;
+      document.getElementById('entrySelectedBox').style.display = 'block';
+      document.getElementById('entryPreview').textContent = '';
+      renderEntryFoodList(document.getElementById('entryFoodSearch').value);
+      document.getElementById('entryAmount').focus();
+    });
+    wrap.appendChild(div);
+  });
+}
+
+function updateEntryPreview(){
+  if(!selectedFoodForEntry) return;
+  const amt = parseFloat(document.getElementById('entryAmount').value);
+  const preview = document.getElementById('entryPreview');
+  if(isNaN(amt) || amt <= 0){
+    preview.textContent = '';
+    return;
+  }
+  const v = computeEntryValues(selectedFoodForEntry, amt);
+  preview.textContent = `${round(v.kcal)} kcal · P ${round(v.protein,1)}g · K ${round(v.carb,1)}g`;
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+  await loadFoods();
+  await loadGoals();
+  await refreshLogView();
+  renderFoodLibList('');
+
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.view).classList.add('active');
+    });
+  });
+
+  document.getElementById('dateInput').addEventListener('change', async (e)=>{
+    currentDate = e.target.value;
+    await refreshLogView();
+  });
+  document.getElementById('prevDay').addEventListener('click', async ()=>{
+    const d = new Date(currentDate); d.setDate(d.getDate()-1);
+    currentDate = d.toISOString().slice(0,10);
+    await refreshLogView();
+  });
+  document.getElementById('nextDay').addEventListener('click', async ()=>{
+    const d = new Date(currentDate); d.setDate(d.getDate()+1);
+    currentDate = d.toISOString().slice(0,10);
+    await refreshLogView();
+  });
+
+  document.getElementById('editGoalsBtn').addEventListener('click', ()=>{
+    document.getElementById('goalKcal').value = goals.kcal;
+    document.getElementById('goalProtein').value = goals.protein;
+    document.getElementById('goalCarb').value = goals.carb;
+    document.getElementById('modalGoals').classList.add('open');
+  });
+  document.getElementById('cancelGoals').addEventListener('click', ()=>{
+    document.getElementById('modalGoals').classList.remove('open');
+  });
+  document.getElementById('saveGoals').addEventListener('click', async ()=>{
+    const k = parseFloat(document.getElementById('goalKcal').value);
+    const p = parseFloat(document.getElementById('goalProtein').value);
+    const c = parseFloat(document.getElementById('goalCarb').value);
+    goals = { kcal: isNaN(k)?0:k, protein: isNaN(p)?0:p, carb: isNaN(c)?0:c };
+    await saveGoals();
+    renderGoalsAndBars();
+    document.getElementById('modalGoals').classList.remove('open');
+    toast('Hedefler kaydedildi');
+  });
+
+  document.getElementById('openAddFood').addEventListener('click', ()=>openFoodModal(null));
+  document.getElementById('cancelFood').addEventListener('click', closeFoodModal);
+  document.querySelectorAll('.unit-opt').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      newFoodUnit = btn.dataset.unit;
+      document.querySelectorAll('.unit-opt').forEach(b=>b.classList.toggle('active', b===btn));
+    });
+  });
+  document.getElementById('saveFood').addEventListener('click', async ()=>{
+    const name = document.getElementById('foodName').value.trim();
+    const kcal = parseFloat(document.getElementById('foodKcal').value);
+    const protein = parseFloat(document.getElementById('foodProtein').value);
+    const carb = parseFloat(document.getElementById('foodCarb').value);
+    if(!name){ toast('İsim girin'); return; }
+    if(isNaN(kcal)){ toast('Kalori girin'); return; }
+    if(editingFoodId){
+      const idx = foods.findIndex(f=>f.id===editingFoodId);
+      foods[idx] = { ...foods[idx], name, unit:newFoodUnit, kcal, protein: isNaN(protein)?0:protein, carb: isNaN(carb)?0:carb };
+    } else {
+      foods.push({ id: 'f'+Date.now(), name, unit:newFoodUnit, kcal, protein: isNaN(protein)?0:protein, carb: isNaN(carb)?0:carb });
+    }
+    await saveFoods();
+    renderFoodLibList(document.getElementById('foodSearchLib').value);
+    closeFoodModal();
+    toast('Besin kaydedildi');
+  });
+  document.getElementById('deleteFoodBtn').addEventListener('click', async ()=>{
+    if(!editingFoodId) return;
+    foods = foods.filter(f=>f.id !== editingFoodId);
+    await saveFoods();
+    renderFoodLibList(document.getElementById('foodSearchLib').value);
+    closeFoodModal();
+    toast('Besin silindi');
+  });
+
+  document.getElementById('foodSearchLib').addEventListener('input', (e)=>{
+    renderFoodLibList(e.target.value);
+  });
+
+  document.getElementById('openAddEntry').addEventListener('click', openEntryModal);
+  document.getElementById('cancelEntry').addEventListener('click', closeEntryModal);
+  document.getElementById('entryFoodSearch').addEventListener('input', (e)=>{
+    renderEntryFoodList(e.target.value);
+  });
+  document.getElementById('entryAmount').addEventListener('input', updateEntryPreview);
+  document.getElementById('saveEntry').addEventListener('click', async ()=>{
+    if(!selectedFoodForEntry){ toast('Bir besin seçin'); return; }
+    const amt = parseFloat(document.getElementById('entryAmount').value);
+    if(isNaN(amt) || amt <= 0){ toast('Miktar girin'); return; }
+    const v = computeEntryValues(selectedFoodForEntry, amt);
+    dayEntries.push({
+      foodId: selectedFoodForEntry.id,
+      foodName: selectedFoodForEntry.name,
+      amount: amt,
+      unit: selectedFoodForEntry.unit,
+      kcal: v.kcal, protein: v.protein, carb: v.carb
+    });
+    await saveDay(currentDate);
+    renderEntryList();
+    renderGoalsAndBars();
+    closeEntryModal();
+  });
+
+  [document.getElementById('modalEntry'), document.getElementById('modalFood'), document.getElementById('modalGoals')].forEach(m=>{
+    m.addEventListener('click', (e)=>{ if(e.target === m) m.classList.remove('open'); });
+  });
+});
+</script>
+</body>
+</html>
